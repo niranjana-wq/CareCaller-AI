@@ -4,7 +4,7 @@ import json
 import base64
 from audio_recorder_streamlit import audio_recorder
 
-API_URL = "http://localhost:8000"
+API_URL = "https://carecaller-ai.onrender.com"
 
 st.set_page_config(page_title="Healthcare Voice Agent", layout="wide")
 st.title("Healthcare Voice Agent - Call Simulation")
