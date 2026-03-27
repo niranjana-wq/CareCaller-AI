@@ -1,0 +1,109 @@
+:root {
+    --bg-color: #0d1117;
+    --card-bg: #161b22;
+    --text-primary: #c9d1d9;
+    --accent: #58a6ff;
+    --accent-hover: #3182ce;
+    --danger: #f85149;
+    --success: #2ea043;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    margin: 0;
+    padding: 2rem;
+    display: flex;
+    justify-content: center;
+}
+
+.container {
+    max-width: 800px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+h1 { margin-bottom: 0.2rem; }
+.subtitle { color: #8b949e; margin-top: 0; }
+
+.call-box {
+    background-color: var(--card-bg);
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.status {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.idle { background-color: #30363d; color: #8b949e; }
+.listening { background-color: rgba(46, 160, 67, 0.2); color: var(--success); }
+.capturing { background-color: rgba(88, 166, 255, 0.2); color: var(--accent); }
+.processing { background-color: rgba(210, 153, 34, 0.2); color: #d29922; }
+.speaking { background-color: rgba(137, 87, 229, 0.2); color: #8957e5; }
+
+.visualizer {
+    width: 100%;
+    height: 8px;
+    background-color: #30363d;
+    border-radius: 4px;
+    overflow: hidden;
+}
+.bar {
+    height: 100%;
+    width: 0%;
+    background-color: var(--success);
+    transition: width 0.05s ease;
+}
+
+.dialogue-box {
+    width: 100%;
+    min-height: 80px;
+    background-color: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 1rem;
+    font-size: 1.1rem;
+    line-height: 1.5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.btn {
+    padding: 0.8rem 2rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.btn-primary { background-color: var(--accent); color: #fff; }
+.btn-primary:hover { background-color: var(--accent-hover); }
+.btn-danger { background-color: var(--danger); color: #fff; }
+
+.state-panel {
+    background-color: var(--card-bg);
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+pre {
+    color: var(--accent);
+    white-space: pre-wrap;
+    font-family: "Courier New", Courier, monospace;
+}

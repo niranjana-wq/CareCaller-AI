@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+requests
+python-dotenv
+pydantic
+groq
+elevenlabs
+python-multipart
+gTTS
+websockets

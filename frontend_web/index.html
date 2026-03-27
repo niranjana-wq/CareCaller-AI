@@ -1,0 +1,1817 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CareCaller — AI Check-in</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg: #0a0f1a;
+            --surface: #111827;
+            --surface2: #1a2235;
+            --border: rgba(255, 255, 255, 0.08);
+            --text: #e8edf5;
+            --muted: #6b7a99;
+            --accent: #4f9cf9;
+            --accent2: #38d9a9;
+            --danger: #f87171;
+            --jessica: #4f9cf9;
+            --patient: #38d9a9;
+            --radius: 16px;
+            --font: 'DM Sans', sans-serif;
+            --mono: 'DM Mono', monospace;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font);
+            font-size: 15px;
+            height: 100dvh;
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            overflow: hidden;
+        }
+
+        /* ── TOP BAR ── */
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 24px;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface);
+        }
+
+        .topbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 500;
+            font-size: 15px;
+            letter-spacing: 0.01em;
+        }
+
+        .topbar-brand .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent2);
+            box-shadow: 0 0 8px var(--accent2);
+        }
+
+        .call-timer {
+            font-family: var(--mono);
+            font-size: 14px;
+            color: var(--muted);
+            letter-spacing: 0.05em;
+        }
+
+        .call-timer.active {
+            color: var(--accent2);
+        }
+
+        .secure-badge {
+            font-size: 11px;
+            color: var(--muted);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .secure-badge::before {
+            content: '';
+            display: inline-block;
+            width: 6px;
+            height: 8px;
+            border: 1.5px solid var(--muted);
+            border-radius: 1.5px;
+            position: relative;
+            top: -1px;
+        }
+
+        /* ── MAIN GRID ── */
+        .main {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 0;
+            min-height: 0;
+        }
+
+        /* ── LEFT: CALL STAGE ── */
+        .stage {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 28px;
+            padding: 32px;
+            position: relative;
+        }
+
+        /* Participants row */
+        .participants {
+            display: flex;
+            gap: 24px;
+            align-items: flex-end;
+        }
+
+        .participant {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .avatar-wrap {
+            position: relative;
+            width: 120px;
+            height: 120px;
+        }
+
+        /* Waveform ring */
+        .ring-svg {
+            position: absolute;
+            inset: -18px;
+            width: calc(100% + 36px);
+            height: calc(100% + 36px);
+            animation: none;
+        }
+
+        .ring-path {
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .ring-path.jessica {
+            stroke: var(--jessica);
+        }
+
+        .ring-path.patient {
+            stroke: var(--patient);
+        }
+
+        /* Speaking state */
+        .avatar-wrap.speaking .ring-path {
+            opacity: 1;
+        }
+
+        .avatar-wrap.speaking .ring-path {
+            animation: waveform 1.4s ease-in-out infinite;
+        }
+
+        @keyframes waveform {
+
+            0%,
+            100% {
+                stroke-dasharray: 8 4 3 4 12 4 5 4 8 4;
+            }
+
+            25% {
+                stroke-dasharray: 12 4 8 4 4 4 10 4 6 4;
+            }
+
+            50% {
+                stroke-dasharray: 5 4 14 4 7 4 4 4 9 4;
+            }
+
+            75% {
+                stroke-dasharray: 9 4 5 4 11 4 6 4 5 4;
+            }
+        }
+
+        .avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            font-weight: 300;
+            letter-spacing: -1px;
+            position: relative;
+            z-index: 1;
+            overflow: hidden;
+        }
+
+        .avatar.jessica {
+            background: linear-gradient(135deg, #1a3a5c 0%, #1e4976 100%);
+            border: 2px solid rgba(79, 156, 249, 0.3);
+            color: var(--jessica);
+        }
+
+        .avatar.patient {
+            background: linear-gradient(135deg, #0f3028 0%, #134038 100%);
+            border: 2px solid rgba(56, 217, 169, 0.3);
+            color: var(--patient);
+        }
+
+        /* Waveform bars inside avatar when speaking */
+        .wave-bars {
+            display: none;
+            align-items: center;
+            gap: 3px;
+            height: 40px;
+        }
+
+        .wave-bar {
+            width: 4px;
+            border-radius: 2px;
+            background: currentColor;
+            animation: bar-bounce 0.8s ease-in-out infinite;
+        }
+
+        .wave-bar:nth-child(1) {
+            animation-delay: 0s;
+            height: 16px;
+        }
+
+        .wave-bar:nth-child(2) {
+            animation-delay: 0.1s;
+            height: 28px;
+        }
+
+        .wave-bar:nth-child(3) {
+            animation-delay: 0.2s;
+            height: 20px;
+        }
+
+        .wave-bar:nth-child(4) {
+            animation-delay: 0.15s;
+            height: 32px;
+        }
+
+        .wave-bar:nth-child(5) {
+            animation-delay: 0.05s;
+            height: 18px;
+        }
+
+        .wave-bar:nth-child(6) {
+            animation-delay: 0.25s;
+            height: 24px;
+        }
+
+        .wave-bar:nth-child(7) {
+            animation-delay: 0.1s;
+            height: 14px;
+        }
+
+        @keyframes bar-bounce {
+
+            0%,
+            100% {
+                transform: scaleY(0.4);
+            }
+
+            50% {
+                transform: scaleY(1);
+            }
+        }
+
+        .avatar-wrap.speaking .avatar-initials {
+            display: none;
+        }
+
+        .avatar-wrap.speaking .wave-bars {
+            display: flex;
+        }
+
+        .participant-label {
+            font-size: 13px;
+            color: var(--muted);
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        .participant-label strong {
+            display: block;
+            color: var(--text);
+            font-weight: 500;
+            font-size: 14px;
+            margin-bottom: 1px;
+        }
+
+        /* Status badge under label */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 20px;
+            margin-top: 4px;
+            font-family: var(--mono);
+            letter-spacing: 0.03em;
+        }
+
+        .status-badge.listening {
+            background: rgba(56, 217, 169, 0.1);
+            color: var(--accent2);
+        }
+
+        .status-badge.speaking {
+            background: rgba(79, 156, 249, 0.12);
+            color: var(--accent);
+        }
+
+        .status-badge.thinking {
+            background: rgba(251, 191, 36, 0.1);
+            color: #fbbf24;
+        }
+
+        .status-badge.idle {
+            background: rgba(107, 122, 153, 0.1);
+            color: var(--muted);
+        }
+
+        .status-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .status-badge.listening .status-dot {
+            animation: pulse-dot 1.2s ease-in-out infinite;
+        }
+
+        .status-badge.speaking .status-dot {
+            animation: pulse-dot 0.7s ease-in-out infinite;
+        }
+
+        .status-badge.thinking .status-dot {
+            animation: pulse-dot 0.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse-dot {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.4;
+                transform: scale(0.6);
+            }
+        }
+
+        /* Live transcription strip */
+        .live-caption {
+            width: 100%;
+            max-width: 560px;
+            min-height: 64px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            transition: border-color 0.3s;
+        }
+
+        .live-caption.jessica-speaking {
+            border-color: rgba(79, 156, 249, 0.4);
+        }
+
+        .live-caption.patient-speaking {
+            border-color: rgba(56, 217, 169, 0.4);
+        }
+
+        .caption-speaker {
+            font-size: 11px;
+            font-family: var(--mono);
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+
+        .caption-speaker.jessica {
+            color: var(--jessica);
+        }
+
+        .caption-speaker.patient {
+            color: var(--patient);
+        }
+
+        .caption-text {
+            font-size: 16px;
+            line-height: 1.5;
+            color: var(--text);
+            min-height: 24px;
+        }
+
+        /* Typing cursor blink */
+        .caption-text.typing::after {
+            content: '▋';
+            animation: blink 0.8s step-end infinite;
+            font-size: 14px;
+            opacity: 0.7;
+            margin-left: 2px;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: .7
+            }
+
+            50% {
+                opacity: 0
+            }
+        }
+
+        /* Vol meter bar */
+        .vol-meter {
+            width: 100%;
+            max-width: 560px;
+            height: 3px;
+            background: var(--surface2);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .vol-fill {
+            height: 100%;
+            width: 0%;
+            background: var(--accent2);
+            border-radius: 2px;
+            transition: width 0.05s ease;
+        }
+
+        /* ── RIGHT PANEL: TRANSCRIPT + JSON ── */
+        .panel {
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .panel-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px 0;
+            text-align: center;
+            font-size: 12px;
+            font-family: var(--mono);
+            letter-spacing: 0.05em;
+            color: var(--muted);
+            cursor: pointer;
+            transition: color 0.2s, border-bottom 0.2s;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .tab-content {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            min-height: 0;
+        }
+
+        .tab-content.active {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .tab-content::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .tab-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .tab-content::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 2px;
+        }
+
+        /* Transcript messages */
+        .msg {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            animation: msg-in 0.25s ease-out;
+        }
+
+        @keyframes msg-in {
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .msg-speaker {
+            font-size: 10px;
+            font-family: var(--mono);
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .msg-speaker.jessica {
+            color: var(--jessica);
+        }
+
+        .msg-speaker.patient {
+            color: var(--patient);
+        }
+
+        .msg-text {
+            font-size: 13px;
+            line-height: 1.55;
+            color: var(--text);
+            background: var(--surface2);
+            padding: 8px 11px;
+            border-radius: 8px;
+        }
+
+        .msg.jessica .msg-text {
+            border-left: 2px solid var(--jessica);
+        }
+
+        .msg.patient .msg-text {
+            border-left: 2px solid var(--patient);
+        }
+
+        /* JSON output */
+        #jsonContent {
+            font-family: var(--mono);
+            font-size: 12px;
+            line-height: 1.7;
+            color: var(--accent2);
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        /* ── BOTTOM BAR ── */
+        .bottombar {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+            background: var(--surface);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .ctrl-btn {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.2s;
+            background: var(--surface2);
+            color: var(--text);
+        }
+
+        .ctrl-btn:hover {
+            background: #243050;
+        }
+
+        .ctrl-btn.muted {
+            background: rgba(248, 113, 113, 0.15);
+            color: var(--danger);
+        }
+
+        .end-btn {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            background: var(--danger);
+            color: #fff;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            box-shadow: 0 0 24px rgba(248, 113, 113, 0.25);
+        }
+
+        .end-btn:hover {
+            background: #ef4444;
+            transform: scale(1.06);
+        }
+
+        .start-screen {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+            z-index: 300;
+        }
+
+        .start-screen.hidden {
+            display: none !important;
+        }
+
+        .start-screen h1 {
+            font-size: 28px;
+            font-weight: 300;
+            letter-spacing: -0.5px;
+        }
+
+        .start-screen h1 span {
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        .start-screen p {
+            color: var(--muted);
+            font-size: 14px;
+            max-width: 340px;
+            text-align: center;
+            line-height: 1.6;
+        }
+
+        .start-btn {
+            padding: 14px 40px;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 40px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            font-family: var(--font);
+            transition: all 0.2s;
+            box-shadow: 0 0 30px rgba(79, 156, 249, 0.3);
+        }
+
+        .start-btn:hover {
+            background: #3b82f6;
+            transform: translateY(-2px);
+        }
+
+        .patient-input {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .patient-input input {
+            padding: 10px 16px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            font-family: var(--font);
+            font-size: 14px;
+            width: 220px;
+            outline: none;
+        }
+
+        .patient-input input:focus {
+            border-color: var(--accent);
+        }
+
+        .patient-input input::placeholder {
+            color: var(--muted);
+        }
+
+        /* Progress bar */
+        .progress-wrap {
+            width: 100%;
+            max-width: 560px;
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--muted);
+            margin-bottom: 6px;
+            font-family: var(--mono);
+        }
+
+        .progress-bar {
+            height: 3px;
+            background: var(--surface2);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--jessica), var(--accent2));
+            border-radius: 2px;
+            transition: width 0.5s ease;
+        }
+
+        /* ── POST-CALL SCREEN ── */
+        .postcall-screen {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            z-index: 200;
+        }
+
+        .postcall-screen.visible {
+            display: flex;
+            animation: fade-in 0.35s ease;
+        }
+
+        @keyframes fade-in {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .postcall-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 40px 40px 32px;
+            width: 100%;
+            max-width: 480px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .postcall-icon {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+        }
+
+        .postcall-icon.completed {
+            background: rgba(56, 217, 169, 0.12);
+        }
+
+        .postcall-icon.escalated {
+            background: rgba(248, 113, 113, 0.12);
+        }
+
+        .postcall-icon.incomplete {
+            background: rgba(251, 191, 36, 0.1);
+        }
+
+        .postcall-title {
+            font-size: 22px;
+            font-weight: 500;
+            letter-spacing: -0.3px;
+            text-align: center;
+        }
+
+        .postcall-subtitle {
+            font-size: 14px;
+            color: var(--muted);
+            text-align: center;
+            line-height: 1.6;
+            margin-top: -16px;
+        }
+
+        /* Stats row */
+        .postcall-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+            width: 100%;
+        }
+
+        .stat-box {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .stat-value {
+            font-size: 22px;
+            font-weight: 500;
+            font-family: var(--mono);
+            color: var(--accent);
+        }
+
+        .stat-label {
+            font-size: 10px;
+            color: var(--muted);
+            text-align: center;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        /* Responses summary */
+        .responses-summary {
+            width: 100%;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .responses-summary::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .responses-summary::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 2px;
+        }
+
+        .response-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border);
+            font-size: 12.5px;
+            animation: msg-in 0.2s ease-out;
+        }
+
+        .response-row:last-child {
+            border-bottom: none;
+        }
+
+        .response-q {
+            color: var(--muted);
+            flex: 1;
+            line-height: 1.4;
+        }
+
+        .response-a {
+            color: var(--accent2);
+            font-family: var(--mono);
+            font-size: 12px;
+            text-align: right;
+            max-width: 140px;
+            word-break: break-word;
+        }
+
+        .response-a.unknown {
+            color: var(--muted);
+            font-style: italic;
+        }
+
+        /* Action buttons */
+        .postcall-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .action-btn {
+            width: 100%;
+            padding: 13px 20px;
+            border-radius: 12px;
+            border: none;
+            font-family: var(--font);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .action-btn.primary {
+            background: var(--accent);
+            color: #fff;
+            box-shadow: 0 0 20px rgba(79, 156, 249, 0.25);
+        }
+
+        .action-btn.primary:hover {
+            background: #3b82f6;
+            transform: translateY(-1px);
+        }
+
+        .action-btn.secondary {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .action-btn.secondary:hover {
+            border-color: rgba(255, 255, 255, 0.18);
+            background: #243050;
+        }
+
+        .action-btn.ghost {
+            background: transparent;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .action-btn.ghost:hover {
+            color: var(--text);
+        }
+
+        /* Reconnect countdown ring */
+        .reconnect-wrap {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .reconnect-ring {
+            position: absolute;
+            inset: -4px;
+            border-radius: 50%;
+        }
+
+        #reconnectBtn .countdown-num {
+            font-family: var(--mono);
+            font-size: 12px;
+            margin-left: 4px;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- START SCREEN -->
+    <div class="start-screen" id="startScreen">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+            <div class="dot"
+                style="width:10px;height:10px;border-radius:50%;background:var(--accent2);box-shadow:0 0 10px var(--accent2);">
+            </div>
+            <span style="font-family:var(--mono);font-size:13px;color:var(--muted);letter-spacing:0.08em;">CARECALLER
+                AI</span>
+        </div>
+        <h1>Ready for your <span>check-in?</span></h1>
+        <p>CareCaller, your AI health assistant, will guide you through a short medication check-in call.</p>
+        <div class="patient-input">
+            <input type="text" id="patientNameInput" placeholder="Your name (e.g. Sarah)" />
+        </div>
+        <button class="start-btn" onclick="startCall()">Join Call</button>
+    </div>
+
+    <!-- POST-CALL SCREEN -->
+    <div class="postcall-screen" id="postcallScreen">
+        <div class="postcall-card">
+
+            <div class="postcall-icon completed" id="postcallIcon" style="color:var(--accent2)"><svg width="28"
+                    height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="9 12 11 14 15 10" />
+                </svg></div>
+            <div style="text-align:center;">
+                <div class="postcall-title" id="postcallTitle">Check-in Complete</div>
+                <div class="postcall-subtitle" id="postcallSubtitle">Your responses have been recorded and sent to your
+                    care team.</div>
+            </div>
+
+            <!-- Stats -->
+            <div class="postcall-stats">
+                <div class="stat-box">
+                    <div class="stat-value" id="statDuration">0:00</div>
+                    <div class="stat-label">Duration</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="statAnswered">0</div>
+                    <div class="stat-label">Answered</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="statCompletion">0%</div>
+                    <div class="stat-label">Completion</div>
+                </div>
+            </div>
+
+            <!-- Response summary list -->
+            <div class="responses-summary" id="postcallResponses"></div>
+
+            <!-- Action buttons -->
+            <div class="postcall-actions">
+                <button class="action-btn primary" id="reconnectBtn" onclick="rejoinCall()">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="1 4 1 10 7 10" />
+                        <path d="M3.51 15a9 9 0 1 0 .49-3.5" />
+                    </svg> Rejoin Call <span class="countdown-num" id="countdownNum"></span>
+                </button>
+                <button class="action-btn secondary" onclick="newCall()">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path
+                            d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6 6l.92-.92a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+                    </svg> Start New Call
+                </button>
+                <button class="action-btn ghost" onclick="downloadSummary()">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg> Download Summary
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- TOP BAR -->
+    <header class="topbar">
+        <div class="topbar-brand">
+            <div class="dot"></div>
+            CareCaller AI
+        </div>
+        <div class="call-timer" id="callTimer">00:00</div>
+        <div class="secure-badge">End-to-end encrypted</div>
+    </header>
+
+    <!-- MAIN -->
+    <main class="main">
+
+        <!-- LEFT: CALL STAGE -->
+        <section class="stage">
+
+            <!-- Participants -->
+            <div class="participants">
+
+                <!-- Jessica (AI) -->
+                <div class="participant">
+                    <div class="avatar-wrap" id="jessicaWrap">
+                        <svg class="ring-svg" viewBox="0 0 180 180">
+                            <circle class="ring-path jessica" cx="90" cy="90" r="74"
+                                stroke-dasharray="12 4 6 4 10 4 8 4 5 4" />
+                        </svg>
+                        <div class="avatar jessica">
+                            <span class="avatar-initials">JA</span>
+                            <div class="wave-bars">
+                                <div class="wave-bar"></div>
+                                <div class="wave-bar"></div>
+                                <div class="wave-bar"></div>
+                                <div class="wave-bar"></div>
+                                <div class="wave-bar"></div>
+                                <div class="wave-bar"></div>
+                                <div class="wave-bar"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="participant-label">
+                        <strong>AI Health Assistant</strong>
+                        AI Health Assistant
+                        <div>
+                            <span class="status-badge idle" id="jessicaStatus">
+                                <span class="status-dot"></span>
+                                <span id="jessicaStatusText">Waiting</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Patient -->
+                <div class="participant">
+                    <div class="avatar-wrap" id="patientWrap">
+                        <svg class="ring-svg" viewBox="0 0 180 180">
+                            <circle class="ring-path patient" cx="90" cy="90" r="74"
+                                stroke-dasharray="10 4 7 4 13 4 5 4 9 4" />
+                        </svg>
+                        <div class="avatar patient">
+                            <span class="avatar-initials" id="patientInitials">P</span>
+                            <div class="wave-bars">
+                                <div class="wave-bar"></div>
+                                <div class="wave-bar"></div>
+                                <div class="wave-bar"></div>
+                                <div class="wave-bar"></div>
+                                <div class="wave-bar"></div>
+                                <div class="wave-bar"></div>
+                                <div class="wave-bar"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="participant-label">
+                        <strong id="patientNameLabel">Patient</strong>
+                        On this call
+                        <div>
+                            <span class="status-badge listening" id="patientStatus">
+                                <span class="status-dot"></span>
+                                <span id="patientStatusText">Listening</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Progress -->
+            <div class="progress-wrap">
+                <div class="progress-label">
+                    <span>Check-in progress</span>
+                    <span id="progressText">0 / 14 questions</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill" style="width:0%"></div>
+                </div>
+            </div>
+
+            <!-- Live caption -->
+            <div class="live-caption" id="liveCaption">
+                <div class="caption-speaker jessica" id="captionSpeaker">JESSICA</div>
+                <div class="caption-text" id="captionText">Connecting to your call...</div>
+            </div>
+
+            <!-- Volume meter -->
+            <div class="vol-meter">
+                <div class="vol-fill" id="volFill"></div>
+            </div>
+
+        </section>
+
+        <!-- RIGHT PANEL -->
+        <aside class="panel">
+            <div class="panel-tabs">
+                <div class="tab active" onclick="switchTab('transcript')">Transcript</div>
+                <div class="tab" onclick="switchTab('responses')">Responses</div>
+            </div>
+            <div class="tab-content active" id="transcriptTab"></div>
+            <div class="tab-content" id="responsesTab">
+                <pre id="jsonContent">{}</pre>
+            </div>
+        </aside>
+
+    </main>
+
+    <!-- BOTTOM BAR -->
+    <footer class="bottombar">
+        <button class="ctrl-btn" id="muteBtn" onclick="toggleMute()" title="Mute/Unmute"><svg width="20" height="20"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                stroke-linejoin="round">
+                <rect x="9" y="2" width="6" height="12" rx="3" />
+                <path d="M5 10a7 7 0 0 0 14 0" />
+                <line x1="12" y1="17" x2="12" y2="22" />
+                <line x1="9" y1="22" x2="15" y2="22" />
+            </svg></button>
+        <button class="end-btn" onclick="endCall()" title="End Call"><svg width="22" height="22" viewBox="0 0 24 24"
+                fill="currentColor">
+                <path
+                    d="M23.36 14.28l-4.6-2a1 1 0 0 0-1.16.29l-2 2.44a15.27 15.27 0 0 1-7.29-7.3l2.44-2a1 1 0 0 0 .29-1.15l-2-4.6A1 1 0 0 0 8 0H3.5A1.5 1.5 0 0 0 2 1.5C2 14 10 22 22.5 22A1.5 1.5 0 0 0 24 20.5V16a1 1 0 0 0-.64-.72z"
+                    transform="rotate(135,12,12) translate(-1,0)" />
+            </svg></button>
+        <button class="ctrl-btn" onclick="toggleTab()" title="Toggle panel"><svg width="20" height="20"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <line x1="15" y1="3" x2="15" y2="21" />
+                <line x1="3" y1="9" x2="15" y2="9" />
+                <line x1="3" y1="15" x2="15" y2="15" />
+            </svg></button>
+    </footer>
+
+    <script>
+        // ═══════════════════════════════════════════
+        //  STATE
+        // ═══════════════════════════════════════════
+        let callState = { responses: {}, current_step: "greeting", question_index: 0, escalate: false, call_ended: false };
+        let chatHistory = [];
+        let isCallActive = false;
+        let isMuted = false;
+        let isSpeaking = false;       // AI is currently speaking
+        let isProcessing = false;     // waiting for backend
+        let timerInterval = null;
+        let timerSeconds = 0;
+
+        // Audio
+        let micStream = null;
+        let audioContext = null;
+        let analyser = null;
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let vadSpeaking = false;
+        let silenceTimer = null;
+
+        // Speech synthesis
+        let currentUtterance = null;
+
+        // DOM shortcuts
+        const jessicaWrap = document.getElementById('jessicaWrap');
+        const patientWrap = document.getElementById('patientWrap');
+        const jessicaStatus = document.getElementById('jessicaStatus');
+        const jessicaStatusText = document.getElementById('jessicaStatusText');
+        const patientStatus = document.getElementById('patientStatus');
+        const patientStatusText = document.getElementById('patientStatusText');
+        const captionSpeaker = document.getElementById('captionSpeaker');
+        const captionText = document.getElementById('captionText');
+        const liveCaption = document.getElementById('liveCaption');
+        const volFill = document.getElementById('volFill');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const callTimer = document.getElementById('callTimer');
+        const jsonContent = document.getElementById('jsonContent');
+        const transcriptTab = document.getElementById('transcriptTab');
+        const muteBtn = document.getElementById('muteBtn');
+
+        // ═══════════════════════════════════════════
+        //  START CALL
+        // ═══════════════════════════════════════════
+        async function startCall() {
+            const nameInput = document.getElementById('patientNameInput').value.trim();
+            const patientName = nameInput || 'Patient';
+
+            document.getElementById('patientNameLabel').textContent = patientName;
+            document.getElementById('patientInitials').textContent = patientName.charAt(0).toUpperCase();
+            document.getElementById('startScreen').classList.add('hidden');
+
+            callState = {
+                responses: {},
+                current_step: "greeting",
+                question_index: 0,
+                escalate: false,
+                call_ended: false,
+                patient_name: patientName
+            };
+            chatHistory = [];
+            isCallActive = true;
+
+            startTimer();
+            await setupMic();
+            await triggerAgent("hello");
+        }
+
+        // ═══════════════════════════════════════════
+        //  TIMER
+        // ═══════════════════════════════════════════
+        function startTimer() {
+            timerSeconds = 0;
+            callTimer.classList.add('active');
+            timerInterval = setInterval(() => {
+                timerSeconds++;
+                const m = String(Math.floor(timerSeconds / 60)).padStart(2, '0');
+                const s = String(timerSeconds % 60).padStart(2, '0');
+                callTimer.textContent = `${m}:${s}`;
+            }, 1000);
+        }
+
+        // ═══════════════════════════════════════════
+        //  JESSICA STATUS HELPERS
+        // ═══════════════════════════════════════════
+        function setJessicaState(state, text) {
+            jessicaWrap.classList.toggle('speaking', state === 'speaking');
+            jessicaStatus.className = `status-badge ${state}`;
+            jessicaStatusText.textContent = text;
+        }
+
+        function setPatientState(state, text) {
+            patientWrap.classList.toggle('speaking', state === 'speaking');
+            patientStatus.className = `status-badge ${state}`;
+            patientStatusText.textContent = text;
+        }
+
+        // ═══════════════════════════════════════════
+        //  CAPTION
+        // ═══════════════════════════════════════════
+        function showCaption(speaker, text, typing = false) {
+            captionSpeaker.textContent = speaker === 'jessica' ? 'JESSICA' : 'YOU';
+            captionSpeaker.className = `caption-speaker ${speaker}`;
+            captionText.textContent = text;
+            captionText.className = `caption-text${typing ? ' typing' : ''}`;
+            liveCaption.className = `live-caption ${speaker}-speaking`;
+        }
+
+        // ═══════════════════════════════════════════
+        //  TRANSCRIPT PANEL
+        // ═══════════════════════════════════════════
+        function addTranscriptMsg(speaker, text) {
+            const div = document.createElement('div');
+            div.className = `msg ${speaker}`;
+            div.innerHTML = `
+    <div class="msg-speaker ${speaker}">${speaker === 'jessica' ? 'JESSICA' : 'YOU'}</div>
+    <div class="msg-text">${text}</div>
+  `;
+            transcriptTab.appendChild(div);
+            transcriptTab.scrollTop = transcriptTab.scrollHeight;
+        }
+
+        // ═══════════════════════════════════════════
+        //  TABS
+        // ═══════════════════════════════════════════
+        function switchTab(name) {
+            document.querySelectorAll('.tab').forEach((t, i) => {
+                const tabs = ['transcript', 'responses'];
+                t.classList.toggle('active', tabs[i] === name);
+            });
+            document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+            document.getElementById(name + 'Tab').classList.add('active');
+        }
+
+        function toggleTab() {
+            const panel = document.querySelector('.panel');
+            panel.style.display = panel.style.display === 'none' ? '' : 'none';
+        }
+
+        // ═══════════════════════════════════════════
+        //  PROGRESS
+        // ═══════════════════════════════════════════
+        function updateProgress() {
+            const idx = callState.question_index || 0;
+            const pct = Math.min(100, (idx / 14) * 100);
+            progressFill.style.width = pct + '%';
+            progressText.textContent = `${idx} / 14 questions`;
+        }
+
+        // ═══════════════════════════════════════════
+        //  BROWSER TTS (zero latency)
+        // ═══════════════════════════════════════════
+        function speak(text, onEnd) {
+            if (!window.speechSynthesis) { onEnd && onEnd(); return; }
+            window.speechSynthesis.cancel();
+
+            const utter = new SpeechSynthesisUtterance(text);
+            utter.rate = 1.05;
+            utter.pitch = 1.0;
+            utter.volume = 1.0;
+
+            // Pick a natural female voice if available
+            const voices = speechSynthesis.getVoices();
+            const preferred = voices.find(v =>
+                (v.name.includes('Samantha') || v.name.includes('Karen') ||
+                    v.name.includes('Female') || v.name.includes('female') ||
+                    v.lang === 'en-US') && !v.name.includes('Male')
+            );
+            if (preferred) utter.voice = preferred;
+
+            utter.onstart = () => {
+                isSpeaking = true;
+                setJessicaState('speaking', 'Speaking');
+                setPatientState('listening', 'Listening');
+            };
+            utter.onend = () => {
+                isSpeaking = false;
+                currentUtterance = null;
+                setJessicaState('idle', 'Waiting');
+                onEnd && onEnd();
+            };
+            utter.onerror = () => {
+                isSpeaking = false;
+                currentUtterance = null;
+                onEnd && onEnd();
+            };
+
+            currentUtterance = utter;
+            speechSynthesis.speak(utter);
+        }
+
+        // Ensure voices are loaded (Chrome loads async)
+        if (speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = () => { };
+        }
+
+        // ═══════════════════════════════════════════
+        //  BACKEND CALL
+        // ═══════════════════════════════════════════
+        async function triggerAgent(userText) {
+            if (!isCallActive) return;
+
+            isProcessing = true;
+            setJessicaState('thinking', 'Thinking...');
+            chatHistory.push({ role: "user", message: userText });
+
+            try {
+                const res = await fetch("/chat_text", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ user_text: userText, state: callState, chat_history: chatHistory })
+                });
+                const data = await res.json();
+                isProcessing = false;
+                handleAgentResponse(data);
+            } catch (e) {
+                console.error("Backend error:", e);
+                isProcessing = false;
+                setJessicaState('idle', 'Error');
+            }
+        }
+
+        function handleAgentResponse(data) {
+            callState = data.state;
+            const text = data.agent_text;
+
+            chatHistory.push({ role: "agent", message: text });
+
+            showCaption('jessica', text);
+            addTranscriptMsg('jessica', text);
+            updateProgress();
+
+            // Update JSON panel
+            jsonContent.textContent = JSON.stringify(callState.responses, null, 2);
+
+            if (callState.call_ended) {
+                speak(text, () => endCall());
+            } else {
+                speak(text, () => {
+                    // Resume listening after jessica finishes speaking
+                    if (isCallActive && !isMuted) {
+                        setPatientState('speaking', 'Your turn');
+                        showCaption('patient', '', true);
+                        resumeVAD();
+                    }
+                });
+            }
+        }
+
+        // ═══════════════════════════════════════════
+        //  MICROPHONE + VAD
+        // ═══════════════════════════════════════════
+        async function setupMic() {
+            try {
+                micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            } catch (e) {
+                alert("Microphone access is required for the call.");
+                return;
+            }
+
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioContext.createMediaStreamSource(micStream);
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 256;
+            source.connect(analyser);
+
+            mediaRecorder = new MediaRecorder(micStream, { mimeType: 'audio/webm' });
+            mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+            mediaRecorder.onstop = handleAudioStop;
+        }
+
+        function resumeVAD() {
+            vadSpeaking = false;
+            runVAD();
+        }
+
+        function runVAD() {
+            if (!isCallActive || isSpeaking || isProcessing) return;
+
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+            function tick() {
+                if (!isCallActive || isSpeaking || isProcessing) {
+                    // Stop the loop cleanly
+                    if (vadSpeaking && mediaRecorder.state === 'recording') {
+                        mediaRecorder.stop();
+                        vadSpeaking = false;
+                    }
+                    return;
+                }
+
+                requestAnimationFrame(tick);
+                analyser.getByteFrequencyData(dataArray);
+                let sum = 0;
+                for (let v of dataArray) sum += v;
+                const avg = sum / dataArray.length;
+
+                // Show volume bar always
+                if (!isMuted) volFill.style.width = Math.min(100, avg * 2.2) + '%';
+
+                if (isMuted) return;
+
+                const THRESHOLD = 22;
+
+                if (avg > THRESHOLD) {
+                    if (!vadSpeaking) {
+                        vadSpeaking = true;
+                        audioChunks = [];
+                        mediaRecorder.start();
+                        setPatientState('speaking', 'Speaking...');
+                        showCaption('patient', '...', false);
+                        clearTimeout(silenceTimer);
+                        // Safety cutoff at 15s
+                        silenceTimer = setTimeout(() => {
+                            if (vadSpeaking) stopRecording();
+                        }, 15000);
+                    }
+                    clearTimeout(silenceTimer);
+                    silenceTimer = setTimeout(() => {
+                        if (vadSpeaking) stopRecording();
+                    }, 1600); // 1.6s silence → done
+                }
+            }
+            requestAnimationFrame(tick);
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                vadSpeaking = false;
+                isProcessing = true;
+                setPatientState('thinking', 'Processing...');
+                mediaRecorder.stop();
+            }
+        }
+
+        async function handleAudioStop() {
+            if (!isCallActive) return;
+            const blob = new Blob(audioChunks, { type: 'audio/webm' });
+            audioChunks = [];
+
+            if (blob.size < 200) {
+                isProcessing = false;
+                resumeVAD();
+                return;
+            }
+
+            // Transcribe via backend
+            const form = new FormData();
+            form.append("audio", blob, "audio.webm");
+            form.append("state", JSON.stringify(callState));
+            form.append("chat_history", JSON.stringify(chatHistory));
+
+            setJessicaState('thinking', 'Thinking...');
+            showCaption('patient', 'Transcribing...');
+
+            try {
+                const res = await fetch("/chat_audio", { method: "POST", body: form });
+                const data = await res.json();
+
+                if (data.user_text && data.user_text.trim()) {
+                    showCaption('patient', data.user_text);
+                    addTranscriptMsg('patient', data.user_text);
+                    // Store in history so agent has context
+                    chatHistory.push({ role: "user", message: data.user_text });
+                    // Use the agent text already returned
+                    isProcessing = false;
+                    handleAgentResponse({ agent_text: data.agent_text, state: data.state });
+                } else {
+                    // Nothing heard — keep listening
+                    isProcessing = false;
+                    setPatientState('speaking', 'Your turn');
+                    resumeVAD();
+                }
+            } catch (e) {
+                console.error(e);
+                isProcessing = false;
+                resumeVAD();
+            }
+        }
+
+        // ═══════════════════════════════════════════
+        //  MUTE / END
+        // ═══════════════════════════════════════════
+        function toggleMute() {
+            isMuted = !isMuted;
+            muteBtn.classList.toggle('muted', isMuted);
+            muteBtn.innerHTML = isMuted ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 10v-1m14 0v1a7 7 0 0 1-.11 1.23"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>` : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="22"/><line x1="9" y1="22" x2="15" y2="22"/></svg>`;
+            muteBtn.title = isMuted ? 'Unmute' : 'Mute';
+            if (isMuted) {
+                volFill.style.width = '0%';
+                setPatientState('idle', 'Muted');
+            } else {
+                setPatientState('speaking', 'Your turn');
+            }
+        }
+
+        // ═══════════════════════════════════════════
+        //  END CALL → POST-CALL SCREEN
+        // ═══════════════════════════════════════════
+        let reconnectCountdown = null;
+        let savedPatientName = '';
+
+        function endCall() {
+            isCallActive = false;
+            if (currentUtterance) window.speechSynthesis.cancel();
+            if (micStream) micStream.getTracks().forEach(t => t.stop());
+            if (audioContext) audioContext.close();
+            clearInterval(timerInterval);
+            callTimer.classList.remove('active');
+
+            showCaption('jessica', 'Call ended. Thank you!');
+            setJessicaState('idle', 'Call ended');
+            setPatientState('idle', 'Disconnected');
+
+            // Save name for rejoin
+            savedPatientName = document.getElementById('patientNameLabel').textContent || 'Patient';
+
+            // Build and show post-call screen
+            buildPostCallScreen();
+            startReconnectCountdown(30); // auto-rejoin offer with 30s countdown
+        }
+
+        function buildPostCallScreen() {
+            const responses = callState.responses || {};
+            const outcome = callState.outcome || (callState.escalate ? 'escalated' : 'completed');
+            const answered = Object.keys(responses).length;
+            const completion = Math.round((answered / 14) * 100);
+
+            // Icon + title + subtitle based on outcome
+            const outcomeMap = {
+                completed: { icon: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg>`, iconColor: 'var(--accent2)', cls: 'completed', title: 'Check-in Complete', sub: 'Your responses have been recorded and sent to your care team.' },
+                escalated: { icon: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`, iconColor: 'var(--danger)', cls: 'escalated', title: 'Escalated to Care Team', sub: 'A healthcare professional will follow up with you shortly.' },
+                opted_out: { icon: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.73 21a2 2 0 0 1-3.46 0"/><path d="M18.63 13A17.89 17.89 0 0 1 18 8"/><path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"/><path d="M18 8a6 6 0 0 0-9.33-5"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`, iconColor: 'var(--muted)', cls: 'incomplete', title: 'Call Opted Out', sub: 'You have been removed from the calling list as requested.' },
+                scheduled: { icon: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`, iconColor: 'var(--accent)', cls: 'incomplete', title: 'Callback Scheduled', sub: 'We will call you back at a better time.' },
+                wrong_number: { icon: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`, iconColor: 'var(--muted)', cls: 'incomplete', title: 'Wrong Number', sub: 'We apologize for the confusion.' },
+                incomplete: { icon: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`, iconColor: '#fbbf24', cls: 'incomplete', title: 'Call Incomplete', sub: `${answered} of 14 questions were answered. You can rejoin to continue.` },
+            };
+            const o = outcomeMap[outcome] || outcomeMap.completed;
+
+            document.getElementById('postcallIcon').innerHTML = o.icon;
+            document.getElementById('postcallIcon').style.color = o.iconColor || 'var(--text)';
+            document.getElementById('postcallIcon').className = `postcall-icon ${o.cls}`;
+            document.getElementById('postcallTitle').textContent = o.title;
+            document.getElementById('postcallSubtitle').textContent = o.sub;
+
+            // Stats
+            const m = String(Math.floor(timerSeconds / 60)).padStart(2, '0');
+            const s = String(timerSeconds % 60).padStart(2, '0');
+            document.getElementById('statDuration').textContent = `${m}:${s}`;
+            document.getElementById('statAnswered').textContent = answered;
+            document.getElementById('statCompletion').textContent = `${completion}%`;
+
+            // Responses list
+            const QUESTION_LABELS = {
+                feeling: 'Overall feeling', weight: 'Current weight', height: 'Height',
+                weight_lost: 'Weight lost (month)', side_effects: 'Side effects',
+                satisfied: 'Satisfied with progress', goal_weight: 'Goal weight',
+                dosage_requests: 'Dosage requests', new_meds: 'New medications',
+                new_conditions: 'New conditions', allergies: 'New allergies',
+                surgeries: 'Surgeries', doctor_questions: 'Doctor questions',
+                shipping_address: 'Address changed'
+            };
+
+            const container = document.getElementById('postcallResponses');
+            container.innerHTML = '';
+
+            if (answered === 0) {
+                container.innerHTML = `<div class="response-row"><div class="response-q" style="color:var(--muted);font-style:italic;">No responses recorded.</div></div>`;
+            } else {
+                Object.entries(responses).forEach(([key, val]) => {
+                    const row = document.createElement('div');
+                    row.className = 'response-row';
+                    const isUnknown = !val || val === 'UNKNOWN';
+                    row.innerHTML = `
+        <div class="response-q">${QUESTION_LABELS[key] || key}</div>
+        <div class="response-a ${isUnknown ? 'unknown' : ''}">${isUnknown ? '—' : val}</div>
+      `;
+                    container.appendChild(row);
+                });
+            }
+
+            // Show the screen
+            document.getElementById('postcallScreen').classList.add('visible');
+        }
+
+        // ── RECONNECT COUNTDOWN ──
+        function startReconnectCountdown(seconds) {
+            let remaining = seconds;
+            const btn = document.getElementById('reconnectBtn');
+            const num = document.getElementById('countdownNum');
+
+            num.textContent = `(${remaining}s)`;
+
+            reconnectCountdown = setInterval(() => {
+                remaining--;
+                if (remaining <= 0) {
+                    clearInterval(reconnectCountdown);
+                    num.textContent = '';
+                    // Auto-rejoin when timer hits 0
+                    rejoinCall();
+                } else {
+                    num.textContent = `(${remaining}s)`;
+                }
+            }, 1000);
+        }
+
+        // ── REJOIN ── resumes the same call from where it left off
+        function rejoinCall() {
+            clearInterval(reconnectCountdown);
+            document.getElementById('postcallScreen').classList.remove('visible');
+
+            // Reset audio context + mic, but keep existing state (responses preserved)
+            callState.call_ended = false;
+            callState.escalate = false;
+            isCallActive = true;
+            isMuted = false;
+            muteBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="22"/><line x1="9" y1="22" x2="15" y2="22"/></svg>`;
+            muteBtn.classList.remove('muted');
+
+            // Restart timer from 0
+            clearInterval(timerInterval);
+            startTimer();
+
+            // Reconnect mic and greet again
+            setupMic().then(() => {
+                const answered = Object.keys(callState.responses).length;
+                const resumeMsg = answered > 0
+                    ? `Welcome back, ${savedPatientName}! Let's continue where we left off.`
+                    : `Welcome back, ${savedPatientName}! Let's start your check-in.`;
+
+                showCaption('jessica', resumeMsg);
+                speak(resumeMsg, () => {
+                    setPatientState('speaking', 'Your turn');
+                    showCaption('patient', '', true);
+                    resumeVAD();
+                });
+                setJessicaState('speaking', 'Speaking');
+                addTranscriptMsg('jessica', resumeMsg);
+            });
+        }
+
+        // ── NEW CALL ── full reset
+        function newCall() {
+            clearInterval(reconnectCountdown);
+            document.getElementById('postcallScreen').classList.remove('visible');
+
+            // Reset everything
+            callState = { responses: {}, current_step: 'greeting', question_index: 0, escalate: false, call_ended: false };
+            chatHistory = [];
+            transcriptTab.innerHTML = '';
+            jsonContent.textContent = '{}';
+            progressFill.style.width = '0%';
+            progressText.textContent = '0 / 14 questions';
+            timerSeconds = 0;
+            callTimer.textContent = '00:00';
+
+            // Go back to start screen
+            document.getElementById('startScreen').classList.remove('hidden');
+        }
+
+        // ── DOWNLOAD SUMMARY ──
+        function downloadSummary() {
+            const responses = callState.responses || {};
+            const outcome = callState.outcome || (callState.escalate ? 'escalated' : 'completed');
+            const m = String(Math.floor(timerSeconds / 60)).padStart(2, '0');
+            const s = String(timerSeconds % 60).padStart(2, '0');
+
+            const summary = {
+                patient_name: savedPatientName,
+                outcome,
+                call_duration_seconds: timerSeconds,
+                call_duration_formatted: `${m}:${s}`,
+                questions_answered: Object.keys(responses).length,
+                completion_pct: Math.round((Object.keys(responses).length / 14) * 100),
+                responses_json: responses,
+                timestamp: new Date().toISOString()
+            };
+
+            const blob = new Blob([JSON.stringify(summary, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `carecaller_${savedPatientName.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+
+</html>
