@@ -1,5 +1,6 @@
-from backend.intent_detector import detect_intent
-from backend.llm_agent import extract_answer_from_user, generate_agent_response
+from intent_detector import detect_intent
+from llm_agent import something
+from audio_handler import something
 
 QUESTIONS = [
     {"id": "feeling", "question": "How have you been feeling overall?"},

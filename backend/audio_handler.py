@@ -2,7 +2,7 @@ import os
 import requests
 from dotenv import load_dotenv
 from gtts import gTTS
-from backend.llm_agent import groq_client
+from llm_agent import groq_client
 
 load_dotenv()
 

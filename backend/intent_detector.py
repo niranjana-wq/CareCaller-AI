@@ -1,4 +1,4 @@
-from backend.llm_agent import groq_client
+from llm_agent import groq_client
 
 def detect_intent(user_text: str) -> str:
     """
