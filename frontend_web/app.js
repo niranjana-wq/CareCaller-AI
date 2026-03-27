@@ -171,7 +171,7 @@ async function submitAudio(blob) {
     formData.append("chat_history", JSON.stringify(chatHistory));
     
     try {
-        const res = await fetch("/chat_audio", { method: "POST", body: formData });
+        const res = await fetch("https://carecaller-backend.onrender.com/chat_audio", { method: "POST", body: formData });
         const data = await res.json();
         
         if (data.user_text && data.user_text.trim() !== "") {
