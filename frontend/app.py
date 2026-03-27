@@ -109,7 +109,7 @@ with col1:
             st.warning("Call ended.")
 
     # Display as a Phone Call instead of Chat App
-    st.markdown("### 📞 Live Call with Jessica (AI)")
+    st.markdown("### 📞 Live Call with AI Assistant")
     
     # Show only the latest interaction
     if st.session_state.chat_history:
@@ -120,7 +120,7 @@ with col1:
             
         last_agent = [m for m in st.session_state.chat_history if m["role"] == "agent"]
         if last_agent:
-            st.info(f"**Jessica says:** {last_agent[-1]['message']}", icon="🤖")
+            st.info(f"**AI Assistant says:** {last_agent[-1]['message']}", icon="🤖")
 
     if not st.session_state.call_state["call_ended"]:
         st.write("---")

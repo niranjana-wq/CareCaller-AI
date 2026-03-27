@@ -1093,7 +1093,7 @@
             <!-- Participants -->
             <div class="participants">
 
-                <!-- Jessica (AI) -->
+                <!-- AI Assistant -->
                 <div class="participant">
                     <div class="avatar-wrap" id="jessicaWrap">
                         <svg class="ring-svg" viewBox="0 0 180 180">
@@ -1101,7 +1101,7 @@
                                 stroke-dasharray="12 4 6 4 10 4 8 4 5 4" />
                         </svg>
                         <div class="avatar jessica">
-                            <span class="avatar-initials">JA</span>
+                            <span class="avatar-initials">AI</span>
                             <div class="wave-bars">
                                 <div class="wave-bar"></div>
                                 <div class="wave-bar"></div>
@@ -1172,7 +1172,7 @@
 
             <!-- Live caption -->
             <div class="live-caption" id="liveCaption">
-                <div class="caption-speaker jessica" id="captionSpeaker">AI Health Assisstant</div>
+                <div class="caption-speaker jessica" id="captionSpeaker">AI Assistant</div>
                 <div class="caption-text" id="captionText">Connecting to your call...</div>
             </div>
 
@@ -1326,7 +1326,7 @@
         //  CAPTION
         // ═══════════════════════════════════════════
         function showCaption(speaker, text, typing = false) {
-            captionSpeaker.textContent = speaker === 'jessica' ? 'JESSICA' : 'YOU';
+            captionSpeaker.textContent = speaker === 'jessica' ? 'AI ASSISTANT' : 'YOU';
             captionSpeaker.className = `caption-speaker ${speaker}`;
             captionText.textContent = text;
             captionText.className = `caption-text${typing ? ' typing' : ''}`;
@@ -1340,7 +1340,7 @@
             const div = document.createElement('div');
             div.className = `msg ${speaker}`;
             div.innerHTML = `
-    <div class="msg-speaker ${speaker}">${speaker === 'jessica' ? 'JESSICA' : 'YOU'}</div>
+    <div class="msg-speaker ${speaker}">${speaker === 'jessica' ? 'AI ASSISTANT' : 'YOU'}</div>
     <div class="msg-text">${text}</div>
   `;
             transcriptTab.appendChild(div);
