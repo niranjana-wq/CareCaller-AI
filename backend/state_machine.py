@@ -1,6 +1,6 @@
 from intent_detector import detect_intent
-from llm_agent import something
-from audio_handler import something
+from llm_agent import generate_agent_response, extract_answer_from_user
+from audio_handler import groq_client
 
 QUESTIONS = [
     {"id": "feeling", "question": "How have you been feeling overall?"},
