@@ -1,6 +1,6 @@
-#from fastapi import FastAPI, UploadFile, File, Form
-#from fastapi.middleware.cors import CORSMiddleware
-#from fastapi.staticfiles import StaticFiles
+from fastapi import FastAPI, UploadFile, File, Form
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 import os
 import json
 import base64
