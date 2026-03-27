@@ -43,7 +43,7 @@ async function triggerAgentText(text) {
     chatHistory.push({role: "user", message: text});
     
     try {
-        const res = await fetch("/chat_text", {
+        const res = await fetch("https://carecaller-ai.onrender.com/chat_text", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({ user_text: text, state: callState, chat_history: chatHistory })
