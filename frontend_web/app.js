@@ -60,7 +60,7 @@ function handleBackendResponse(data) {
     callState = data.state;
     chatHistory.push({role: "agent", message: data.agent_text});
     
-    transcriptOut.innerHTML = `<strong>Jessica:</strong> ${data.agent_text}`;
+    transcriptOut.innerHTML = `<strong>AI Health Assistant:</strong> ${data.agent_text}`;
     jsonOut.textContent = JSON.stringify(callState.responses, null, 2);
     
     if (data.audio_b64) {
