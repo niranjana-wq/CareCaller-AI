@@ -7,8 +7,8 @@ import base64
 import tempfile
 from pydantic import BaseModel
 
-from backend.state_machine import process_turn
-from backend.audio_handler import transcribe_audio, generate_speech
+ffrom state_machine import process_turn
+from audio_handler import transcribe_audio, generate_speech
 
 app = FastAPI(title="Healthcare Voice Agent API")
 
