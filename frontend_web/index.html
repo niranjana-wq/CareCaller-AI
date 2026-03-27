@@ -1432,7 +1432,7 @@
             chatHistory.push({ role: "user", message: userText });
 
             try {
-                const res = await fetch("/chat_text", {
+                const res = await fetch("https://carecaller-backend.onrender.com/chat_text", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ user_text: userText, state: callState, chat_history: chatHistory })
@@ -1581,7 +1581,7 @@
             showCaption('patient', 'Transcribing...');
 
             try {
-                const res = await fetch("/chat_audio", { method: "POST", body: form });
+                const res = await fetch("https://carecaller-backend.onrender.com/chat_audio", { method: "POST", body: form });
                 const data = await res.json();
 
                 if (data.user_text && data.user_text.trim()) {
