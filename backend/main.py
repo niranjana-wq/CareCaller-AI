@@ -1,6 +1,6 @@
-from fastapi import FastAPI, UploadFile, File, Form
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
+#from fastapi import FastAPI, UploadFile, File, Form
+#from fastapi.middleware.cors import CORSMiddleware
+#from fastapi.staticfiles import StaticFiles
 import os
 import json
 import base64
@@ -109,5 +109,5 @@ async def chat_audio(
     }
 
 # Mount static frontend
-app.mount("/", StaticFiles(directory="frontend_web", html=True), name="static")
+#app.mount("/", StaticFiles(directory="frontend_web", html=True), name="static")
 
